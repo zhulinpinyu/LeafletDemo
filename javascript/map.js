@@ -28,8 +28,20 @@ function Identify (e) {
     url:URL,
     datatype: "html",
     type: "GET",
+    contentType: 'application/json; charset=UTF-8',
     success: function(data) {
-      alert(JSON.stringify(data));
+      store = data.features[0]
+      if(store != undefined){
+        popup = L.popup()
+                 .setLatLng(e.latlng)
+                 .setContent("<table>"+
+                             "<tr><td>BizName:</td><td>"+store.properties.lgl_biz_name+"</td></tr>"+
+                             "<tr><td>StoreName:</td><td>"+store.properties.lgl_name_local+"</td></tr>"+
+                             "<tr><td>Address:</td><td>"+store.properties.lgl_raw_address+"</td></tr>"+
+                             "</table>");
+        map.openPopup(popup);
+      }
+      //alert(JSON.stringify(data));
     }
  });
 }
