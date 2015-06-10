@@ -17,16 +17,15 @@ wms_layer = L.tileLayer.wms("http://"+HOST_IP+":8080/geoserver/test/wms", {
   pointerCursor: true
 });
 
+heatmap_layer = L.heatLayer([], {radius: 18, blur: 30});
 
 map = L.map('map',{
   layers:[mapbox_layer]
 }).setView([22.53,114.03],12);
 
-//Init Heat_map
-//setup_heat_layer();
-
+setup_map_control()
 map.on('click', Identify);
-//map.on('zoomend', setup_heat_layer);
+map.on('overlayadd', setup_heatmap);
 
 function Identify (e) {
   var BBOX = map.getBounds().toBBoxString();
@@ -74,7 +73,7 @@ function load_heat(data) {
     heat_data.push(latLng);
   });
   console.log(heat_data.length);
-  heatmap_layer = L.heatLayer(heat_data, {radius: 18, blur: 30}).addTo(map);
+  heatmap_layer.setLatLngs(heat_data)
 }
 
 function setup_map_control(){
@@ -88,11 +87,14 @@ function setup_map_control(){
   map.addControl(new L.control.layers(baseMaps, overlays, {collapsed: true}));
 }
 
-$.ajax({
-  url:get_url(),
-  datatype: "html",
-  type: "GET",
-  contentType: 'application/json; charset=UTF-8',
-  success: load_heat,
-  complete: setup_map_control
- });
+function setup_heatmap(){
+  if(map.getZoom()>11){
+    $.ajax({
+      url:get_url(),
+      datatype: "html",
+      type: "GET",
+      contentType: 'application/json; charset=UTF-8',
+      success: load_heat
+     });
+  }
+}
