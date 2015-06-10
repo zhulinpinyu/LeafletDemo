@@ -1,24 +1,32 @@
-var map_box_layer = L.tileLayer('https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png',{
+var HOST_IP = "10.211.55.21";
+var mapbox_layer;
+var wms_layer;
+var heatmap_layer;
+var map;
+
+
+mapbox_layer = L.tileLayer('https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png',{
   maxZoom: 18,
   id: 'examples.map-i875mjb7'
 });
-var HOST_IP = "10.211.55.21"
-var my_wms = L.tileLayer.wms("http://"+HOST_IP+":8080/geoserver/test/wms", {
-    layers: 'test:stores_geoosm',
-    format: 'image/png',
-    transparent: true,
-    pointerCursor: true
+
+wms_layer = L.tileLayer.wms("http://"+HOST_IP+":8080/geoserver/test/wms", {
+  layers: 'test:stores_geoosm',
+  format: 'image/png',
+  transparent: true,
+  pointerCursor: true
 });
-var heat_layer;
-var map = L.map('map',{
-  layers:[map_box_layer]
+
+
+map = L.map('map',{
+  layers:[mapbox_layer]
 }).setView([22.53,114.03],12);
 
 //Init Heat_map
 //setup_heat_layer();
 
 map.on('click', Identify);
-map.on('zoomend', setup_heat_layer);
+//map.on('zoomend', setup_heat_layer);
 
 function Identify (e) {
   var BBOX = map.getBounds().toBBoxString();
@@ -50,31 +58,41 @@ function Identify (e) {
  });
 }
 
-function setup_heat_layer(){
-  map.eachLayer(function(layer){
-    console.log(layer);
-  });
+function get_url() {
   var BBOX = map.getBounds().toBBoxString();
   var WIDTH = map.getSize().x;
   var HEIGHT = map.getSize().y;
-  var wfs_url = "http://"+HOST_IP+":8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=test:stores_geoosm&minFeatures=0&outputFormat=application%2Fjson&SRS=EPSG%3A4326&WIDTH="+WIDTH+"&HEIGHT="+HEIGHT+"&BBOX="+BBOX
-  $.ajax({
-    url:wfs_url,
-    datatype: "html",
-    type: "GET",
-    contentType: 'application/json; charset=UTF-8',
-    success: function(data) {
-      var heat_data = []
-      $.each(data.features, function(key, val){
-        var lat = val.geometry.coordinates[1];
-        var lng = val.geometry.coordinates[0];
-        var latLng = L.latLng(lat,lng);
-        heat_data.push(latLng);
-      });
-      console.log(heat_data.length);
-      heat_layer = undefined;
-      heat_layer = L.heatLayer(heat_data, {radius: 18, blur: 30});
-      map.addLayer(heat_layer);
-    }
- });
+  return "http://"+HOST_IP+":8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=test:stores_geoosm&minFeatures=0&outputFormat=application%2Fjson&SRS=EPSG%3A4326&WIDTH="+WIDTH+"&HEIGHT="+HEIGHT+"&BBOX="+BBOX
 }
+
+function load_heat(data) {
+  var heat_data = []
+  $.each(data.features, function(key, val){
+    var lat = val.geometry.coordinates[1];
+    var lng = val.geometry.coordinates[0];
+    var latLng = L.latLng(lat,lng);
+    heat_data.push(latLng);
+  });
+  console.log(heat_data.length);
+  heatmap_layer = L.heatLayer(heat_data, {radius: 18, blur: 30}).addTo(map);
+}
+
+function setup_map_control(){
+  baseMaps = {
+    "Mapbox": mapbox_layer
+  };
+  overlays = {
+    "HeatMap": heatmap_layer,
+    "WMS": wms_layer
+  };
+  map.addControl(new L.control.layers(baseMaps, overlays, {collapsed: true}));
+}
+
+$.ajax({
+  url:get_url(),
+  datatype: "html",
+  type: "GET",
+  contentType: 'application/json; charset=UTF-8',
+  success: load_heat,
+  complete: setup_map_control
+ });
