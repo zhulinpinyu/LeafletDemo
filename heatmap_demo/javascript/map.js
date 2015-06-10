@@ -30,9 +30,10 @@ var cfg = {
 heatmap_layer = new HeatmapOverlay(cfg);
 
 map = L.map('map',{
-  layers:[osm_layer, heatmap_layer]
+  layers:[osm_layer]
 }).setView([22.53,114.03],12);
 
+setup_map_control()
 
 map.on('click', Identify);
 
@@ -66,11 +67,29 @@ function Identify (e) {
  });
 }
 
-function get_url() {
-  var BBOX = map.getBounds().toBBoxString();
-  var WIDTH = map.getSize().x;
-  var HEIGHT = map.getSize().y;
-  return "http://"+HOST_IP+":8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=test:stores_geoosm&minFeatures=0&outputFormat=application%2Fjson&SRS=EPSG%3A4326&WIDTH="+WIDTH+"&HEIGHT="+HEIGHT+"&BBOX="+BBOX
+function setup_map_control(){
+  baseMaps = {
+    "Mapbox": osm_layer
+  };
+  overlays = {
+    "HeatMap": heatmap_layer,
+    "WMS": wms_layer
+  };
+  map.addControl(new L.control.layers(baseMaps, overlays, {collapsed: true}));
+}
+
+map.on('overlayadd', setup_heatmap)
+
+function setup_heatmap(){
+  if(map.getZoom() > 10){
+    $.ajax({
+      url:get_url(),
+      datatype: "html",
+      type: "GET",
+      contentType: 'application/json; charset=UTF-8',
+      success: load_heat
+    });
+  }
 }
 
 function load_heat(data) {
@@ -89,22 +108,9 @@ function load_heat(data) {
   heatmap_layer.setData({max: 8, data: heat_data});
 }
 
-function setup_map_control(){
-  baseMaps = {
-    "Mapbox": osm_layer
-  };
-  overlays = {
-    "HeatMap": heatmap_layer,
-    "WMS": wms_layer
-  };
-  map.addControl(new L.control.layers(baseMaps, overlays, {collapsed: true}));
+function get_url() {
+  var BBOX = map.getBounds().toBBoxString();
+  var WIDTH = map.getSize().x;
+  var HEIGHT = map.getSize().y;
+  return "http://"+HOST_IP+":8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=test:stores_geoosm&minFeatures=0&outputFormat=application%2Fjson&SRS=EPSG%3A4326&WIDTH="+WIDTH+"&HEIGHT="+HEIGHT+"&BBOX="+BBOX
 }
-
-$.ajax({
-  url:get_url(),
-  datatype: "html",
-  type: "GET",
-  contentType: 'application/json; charset=UTF-8',
-  success: load_heat,
-  complete: setup_map_control
- });
