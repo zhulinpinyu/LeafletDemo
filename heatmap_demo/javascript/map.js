@@ -1,13 +1,12 @@
 var HOST_IP = "10.211.55.21";
-var mapbox_layer;
+var osm_layer;
 var wms_layer;
 var heatmap_layer;
 var map;
 
 
-mapbox_layer = L.tileLayer('https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png',{
-  maxZoom: 18,
-  id: 'examples.map-i875mjb7'
+osm_layer = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom: 18
 });
 
 wms_layer = L.tileLayer.wms("http://"+HOST_IP+":8080/geoserver/test/wms", {
@@ -17,16 +16,25 @@ wms_layer = L.tileLayer.wms("http://"+HOST_IP+":8080/geoserver/test/wms", {
   pointerCursor: true
 });
 
+var cfg = {
+  "radius": 30,
+  "maxOpacity": .9,
+  "scaleRadius": false,
+  "useLocalExtrema": true,
+  blur: 1,
+  latField: 'lat',
+  lngField: 'lng',
+  valueField: 'count'
+};
+
+heatmap_layer = new HeatmapOverlay(cfg);
 
 map = L.map('map',{
-  layers:[mapbox_layer]
+  layers:[osm_layer, heatmap_layer]
 }).setView([22.53,114.03],12);
 
-//Init Heat_map
-//setup_heat_layer();
 
 map.on('click', Identify);
-//map.on('zoomend', setup_heat_layer);
 
 function Identify (e) {
   var BBOX = map.getBounds().toBBoxString();
@@ -70,16 +78,20 @@ function load_heat(data) {
   $.each(data.features, function(key, val){
     var lat = val.geometry.coordinates[1];
     var lng = val.geometry.coordinates[0];
-    var latLng = L.latLng(lat,lng);
+    var latLng = {
+      lat: lat,
+      lng: lng,
+      count: 1
+    };
     heat_data.push(latLng);
   });
   console.log(heat_data.length);
-  heatmap_layer = L.heatLayer(heat_data, {radius: 18, blur: 30}).addTo(map);
+  heatmap_layer.setData({max: 8, data: heat_data});
 }
 
 function setup_map_control(){
   baseMaps = {
-    "Mapbox": mapbox_layer
+    "Mapbox": osm_layer
   };
   overlays = {
     "HeatMap": heatmap_layer,
