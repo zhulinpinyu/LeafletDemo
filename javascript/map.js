@@ -9,12 +9,16 @@ var my_wms = L.tileLayer.wms("http://"+HOST_IP+":8080/geoserver/test/wms", {
     transparent: true,
     pointerCursor: true
 });
-
+var heat_layer;
 var map = L.map('map',{
-  layers:[map_box_layer, my_wms]
+  layers:[map_box_layer]
 }).setView([22.53,114.03],12);
 
+//Init Heat_map
+//setup_heat_layer();
+
 map.on('click', Identify);
+map.on('zoomend', setup_heat_layer);
 
 function Identify (e) {
   var BBOX = map.getBounds().toBBoxString();
@@ -46,20 +50,31 @@ function Identify (e) {
  });
 }
 
-function get_geojson_url(){
+function setup_heat_layer(){
+  map.eachLayer(function(layer){
+    console.log(layer);
+  });
   var BBOX = map.getBounds().toBBoxString();
   var WIDTH = map.getSize().x;
   var HEIGHT = map.getSize().y;
   var wfs_url = "http://"+HOST_IP+":8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=test:stores_geoosm&minFeatures=0&outputFormat=application%2Fjson&SRS=EPSG%3A4326&WIDTH="+WIDTH+"&HEIGHT="+HEIGHT+"&BBOX="+BBOX
-  return wfs_url
-}
-
-$.ajax({
-    url:get_geojson_url(),
+  $.ajax({
+    url:wfs_url,
     datatype: "html",
     type: "GET",
     contentType: 'application/json; charset=UTF-8',
     success: function(data) {
-      console.log(data);
+      var heat_data = []
+      $.each(data.features, function(key, val){
+        var lat = val.geometry.coordinates[1];
+        var lng = val.geometry.coordinates[0];
+        var latLng = L.latLng(lat,lng);
+        heat_data.push(latLng);
+      });
+      console.log(heat_data.length);
+      heat_layer = undefined;
+      heat_layer = L.heatLayer(heat_data, {radius: 18, blur: 30});
+      map.addLayer(heat_layer);
     }
  });
+}
