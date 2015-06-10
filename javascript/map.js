@@ -2,7 +2,7 @@ var map_box_layer = L.tileLayer('https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y
   maxZoom: 18,
   id: 'examples.map-i875mjb7'
 });
-var HOST_IP = "172.15.1.195"
+var HOST_IP = "10.211.55.21"
 var my_wms = L.tileLayer.wms("http://"+HOST_IP+":8080/geoserver/test/wms", {
     layers: 'test:stores_geoosm',
     format: 'image/png',
@@ -45,3 +45,21 @@ function Identify (e) {
     }
  });
 }
+
+function get_geojson_url(){
+  var BBOX = map.getBounds().toBBoxString();
+  var WIDTH = map.getSize().x;
+  var HEIGHT = map.getSize().y;
+  var wfs_url = "http://"+HOST_IP+":8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=test:stores_geoosm&minFeatures=0&outputFormat=application%2Fjson&SRS=EPSG%3A4326&WIDTH="+WIDTH+"&HEIGHT="+HEIGHT+"&BBOX="+BBOX
+  return wfs_url
+}
+
+$.ajax({
+    url:get_geojson_url(),
+    datatype: "html",
+    type: "GET",
+    contentType: 'application/json; charset=UTF-8',
+    success: function(data) {
+      console.log(data);
+    }
+ });
